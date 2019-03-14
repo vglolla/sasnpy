@@ -1,6 +1,6 @@
-%include 'C:\Experiments\SASPython\SASScripts\sasnpy.sas';
+%include 'C:\GHRepositories\sasnpy\SAS-Scripts\sasnpy.sas';
 
-%initsasnpy(C:\Experiments\SASPython\sasnpy-1\sasnpy-1\bin\x64\Debug);
+%initsasnpy(C:\GHRepositories\sasnpy\SASnPy\bin\x64\Debug);
 
 data _null_;
 
@@ -9,5 +9,10 @@ tempdir_res = sasnpy_workingdir();
 
 put "PI : " pi_res;
 put "TempDir : " tempdir_res;
+
+call sasnpy_pypath("C:/Python/Python3.6/Python.exe");
+ex_res = sasnpy_execute("C:/GHRepositories/sasnpy/TestScripts/pySample1.py");
+put "Exit Code : " ex_res;
+
 
 run;

@@ -11,8 +11,13 @@ LINK "&dllpath\sasnpy.dll";
 
 char * SessionTempLocation(void) label="Get temp working directory";
 double TestPI(void) label="Get me PI";
+void SetPythonPath(char *) label="Set path to Python executable";
+int ExecuteScript(char *) label="Execute script";
 
 RUN;
+
+/* --------------------------------------
+   -------------------------------------- */
 
 PROC FCMP inlib = Work.sasnpy outlib = Work.sasnpy.wrapper;
 
@@ -24,6 +29,15 @@ ENDSUB;
 
 FUNCTION sasnpy_pi();
 	x = TestPI();
+	return(x);
+ENDSUB;
+
+SUBROUTINE sasnpy_pypath(path $);
+	CALL SetPythonPath(TRIM(path));
+ENDSUB;
+
+FUNCTION sasnpy_execute(script $);
+	x = ExecuteScript(TRIM(script));
 	return(x);
 ENDSUB;
 
