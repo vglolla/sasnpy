@@ -1,13 +1,13 @@
-%let dllpath=;
+%let sasnpydllpath=;
 
-%macro initsasnpy(path);
-%let dllpath=&path;
+%macro PyInit(path);
+%let sasnpydllpath=&path;
 
 PROC PROTO package = Work.sasnpy.dotnet
 		   label = "SASnPY .NET Module"
 		   stdcall;
 
-LINK "&dllpath\sasnpy.dll";
+LINK "&sasnpydllpath\sasnpy.dll";
 
 char * SessionTempLocation(void) label="Get temp working directory";
 double TestPI(void) label="Get me PI";
@@ -23,7 +23,7 @@ PROC FCMP inlib = Work.sasnpy outlib = Work.sasnpy.wrapper;
 
 FUNCTION sasnpy_workingdir() $ 1024;
 	length x $1024;
-	x = SessionTempLocation();
+	x = TRIM(SessionTempLocation());
 	return(x);
 ENDSUB;
 
@@ -45,4 +45,48 @@ QUIT;
 
 options append=(cmplib=Work.sasnpy);
 
+%mend;
+
+%macro PyExecute(script);
+sasnpy_execute(&script);
+%mend;
+
+%macro PySetPath(path);
+data _null_;
+call sasnpy_pypath(&path);
+run;
+%mend;
+
+%macro PyResultsPath();
+sasnpy_workingdir();
+%mend;
+
+%macro PySetInputTable(name, ds);
+
+data _null_;
+length tempfile $ 2048;
+length tempdir $ 1024;
+length tempname $ 36;
+tempname = uuidgen(); 
+tempdir = sasnpy_workingdir();
+tempfile = TRIM(tempdir) || '/DataIn/' || TRIM(tempname) ||'.xpt';
+call symput("sasnpydifile", TRIM(tempfile));
+run;
+
+libname sasnpydi xport "&sasnpydifile";
+data sasnpydi.data;
+set &ds;
+run;
+
+%mend;
+
+
+
+%macro printtolog(path);
+	infile &path;
+    do while (not eof);
+      input;
+      _infile_ = resolve(_infile_);
+      put _infile_;
+    end;
 %mend;

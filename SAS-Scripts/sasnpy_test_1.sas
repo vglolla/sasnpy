@@ -1,18 +1,26 @@
+dm 'log;clear;';
+
 %include 'C:\GHRepositories\sasnpy\SAS-Scripts\sasnpy.sas';
 
-%initsasnpy(C:\GHRepositories\sasnpy\SASnPy\bin\x64\Debug);
+%PyInit(C:\GHRepositories\sasnpy\SASnPy\bin\x64\Debug);
+%PySetPath("C:/Python/Python3.6/Python.exe");
 
 data _null_;
 
-pi_res = sasnpy_pi();	
-tempdir_res = sasnpy_workingdir();
+tempdir_res = %PyResultsPath();
+/* put "TempDir : " tempdir_res; */
 
-put "PI : " pi_res;
-put "TempDir : " tempdir_res;
 
-call sasnpy_pypath("C:/Python/Python3.6/Python.exe");
-ex_res = sasnpy_execute("C:/GHRepositories/sasnpy/TestScripts/pySample1.py");
+%PySetInputTable("name", sashelp.air);
+%PySetInputTable("tame", sashelp.baseball);
+
+
+/*
+
+ex_res = %PyExecute("C:/GHRepositories/sasnpy/TestScripts/pySample1.py");
 put "Exit Code : " ex_res;
+
+*/
 
 
 run;

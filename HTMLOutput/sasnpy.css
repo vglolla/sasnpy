@@ -1,0 +1,11 @@
+div.output {
+	background-color: lightblue;
+}
+
+div.error {
+	background-color: lightpink;
+}
+
+div.meta {
+	background-color: lightgray;
+}

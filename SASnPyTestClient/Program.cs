@@ -12,7 +12,7 @@ namespace SASnPyTestClient
         static void Main(string[] args)
         {
             SASnPyHelper.SetPythonPath("C:/Python/Python3.6/Python.exe");
-            SASnPyHelper.ExecuteScript("C:/GHRepositories/sasnpy/TestScripts/pySample1.py");
+            SASnPyHelper.ExecuteScript("C:/GHRepositories/sasnpy/TestScripts/pyFigSample2.py");
         }
 
     }
