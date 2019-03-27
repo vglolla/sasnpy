@@ -5,4 +5,6 @@ def print_table(m, n):
 
 print_table(4, 10)
 
-#dummy_func()
+booyah
+
+dummy_func()

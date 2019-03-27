@@ -1,18 +1,22 @@
 %let sasnpydllpath=;
 
 %macro PyInit(path);
-%let sasnpydllpath=&path;
+%let sasnpydllpath=%str(%sysfunc(dequote(&path)));
+%put &sasnpydllpath;
 
 PROC PROTO package = Work.sasnpy.dotnet
 		   label = "SASnPY .NET Module"
 		   stdcall;
 
-LINK "&sasnpydllpath\sasnpy.dll";
+LINK "&sasnpydllpath/sasnpy.dll"; 
+
 
 char * SessionTempLocation(void) label="Get temp working directory";
 double TestPI(void) label="Get me PI";
 void SetPythonPath(char *) label="Set path to Python executable";
 int ExecuteScript(char *) label="Execute script";
+void SetInputTable(char *, char *) label="Set input table";
+void SetInputValue(char *, char *, char *) label="Set input value";
 
 RUN;
 
@@ -81,12 +85,3 @@ run;
 %mend;
 
 
-
-%macro printtolog(path);
-	infile &path;
-    do while (not eof);
-      input;
-      _infile_ = resolve(_infile_);
-      put _infile_;
-    end;
-%mend;

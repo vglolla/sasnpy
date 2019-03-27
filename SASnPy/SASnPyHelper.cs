@@ -64,6 +64,16 @@ namespace SASnPy
             sPythonPath = sPath;
         }
 
+        [DllExport("SetInputTable", CallingConvention = CallingConvention.StdCall)]
+        public static void SetInputTable(string sTableName, string sTableFile)
+        {
+        }
+
+        [DllExport("SetInputValue", CallingConvention = CallingConvention.StdCall)]
+        public static void SetInputValue(string sValueName, string sValue, string sValueType)
+        {
+        }
+
         [DllExport("ExecuteScript", CallingConvention = CallingConvention.StdCall)]
         public static int ExecuteScript(string sScript)
         {
