@@ -8,10 +8,10 @@ using System.IO;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Web.UI;
+using System.Xml;
 
 using RGiesecke.DllExport;
-
-
+using System.Xml.Linq;
 
 namespace SASnPy
 {
@@ -147,6 +147,29 @@ namespace SASnPy
             return PyExecuteScriptCore(sScript);
         }
 
+        static string GetRandomFileName(string sDirectory, string sPreferredExt = "")
+        {
+            string sFileName = Path.Combine(sDirectory, Path.GetRandomFileName()).Replace('\\', '/');
+            if (!string.IsNullOrWhiteSpace(sPreferredExt))
+            {
+                sFileName = sFileName.Substring(0, sFileName.Length - 3) + sPreferredExt;
+            }
+            return sFileName;
+        }
+
+        static void WaitForSentinelFile(string sSentinelFile, long maxInterval = 3600000)
+        {
+            long waitTime = 0;
+            while (!File.Exists(sSentinelFile) && waitTime <= maxInterval)
+            {
+                waitTime += 500;
+                System.Threading.Thread.Sleep(500);
+            }
+
+            if (File.Exists(sSentinelFile))
+                File.Delete(sSentinelFile);
+        }
+
         public static int PyExecuteScriptCore(string sScript)
         {
             string sScriptFile = sScript;
@@ -160,12 +183,12 @@ namespace SASnPy
 
             if (!File.Exists(sScriptFile))
             {
-                string sTempFile = Path.Combine(sTempDirectory, Path.GetRandomFileName());
+                string sTempFile = GetRandomFileName(sTempDirectory);
                 File.WriteAllText(sTempFile, sScript);
                 sScriptFile = sTempFile;
             }
 
-            string sSentinelFile = Path.Combine(sTempDirectory, Path.GetRandomFileName()).Replace('\\', '/');
+            string sSentinelFile = GetRandomFileName(sTempDirectory);
 
             try
             {
@@ -174,10 +197,7 @@ namespace SASnPy
                 procInputStream.WriteLine(procInputStream.NewLine);
                 procInputStream.Flush();
 
-                while(!File.Exists(sSentinelFile))
-                {
-                    System.Threading.Thread.Sleep(500);
-                }
+                WaitForSentinelFile(sSentinelFile);
             }
             catch (Exception ex)
             {
@@ -220,21 +240,56 @@ namespace SASnPy
         }
 
         [DllExport("PySetInputScalar", CallingConvention = CallingConvention.StdCall)]
-        public static int PySetInputScalar(string sValueName, string sValue, string sValueType)
+        public static int PySetInputScalar(string sScalarName, string sScalarValue, string sScalarType)
         {
+            if (!bSessionActive)
+            {
+                stackErrors.Push("Python session not started.");
+                return 1;
+            }
+
+            string sSentinelFile = GetRandomFileName(sTempDirectory);
+            string sFileName = GetRandomFileName(sTempDataInDir, "xml");
+
+            XElement xEl = new XElement("object", sScalarValue);
+            xEl.Add(new XAttribute("name", sScalarName));
+            xEl.Add(new XAttribute("type", sScalarType));
+            File.WriteAllText(sFileName, xEl.ToString());
+
+            procInputStream.WriteLine("sasnpy.set_input_scalar('{0}', '{1}')", sFileName, sSentinelFile);
+            procInputStream.WriteLine(procInputStream.NewLine);
+            procInputStream.Flush();
+
+            WaitForSentinelFile(sSentinelFile);
+
             return 0;
         }
 
-        [DllExport("PyGetInputTable", CallingConvention = CallingConvention.StdCall)]
-        public static string PyGetInputTable(string sTableName)
+        [DllExport("PyGetOutputTable", CallingConvention = CallingConvention.StdCall)]
+        public static string PyGetOutputTable(string sTableName)
         {
             return string.Empty;
         }
 
-        [DllExport("PyGetInputScalar", CallingConvention = CallingConvention.StdCall)]
-        public static string PyGetInputScalar(string sValueName)
+        [DllExport("PyGetOutputScalar", CallingConvention = CallingConvention.StdCall)]
+        public static string PyGetOutputScalar(string sScalarName)
         {
-            return string.Empty;
+            if (!bSessionActive)
+            {
+                stackErrors.Push("Python session not started.");
+                return string.Empty;
+            }
+
+            string sSentinelFile = GetRandomFileName(sTempDirectory);
+            string sFileName = GetRandomFileName(sTempDataOutDir);
+
+            procInputStream.WriteLine("sasnpy.get_output_scalar('{0}', '{1}', '{2}')", sScalarName, sFileName, sSentinelFile);
+            procInputStream.WriteLine(procInputStream.NewLine);
+            procInputStream.Flush();
+
+            WaitForSentinelFile(sSentinelFile);
+
+            return File.Exists(sFileName) ? sFileName : string.Empty;
         }
 
         [DllExport("PyGetLastError", CallingConvention = CallingConvention.StdCall)]
