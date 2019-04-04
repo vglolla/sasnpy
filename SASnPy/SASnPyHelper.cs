@@ -236,6 +236,20 @@ namespace SASnPy
         [DllExport("PySetInputTable", CallingConvention = CallingConvention.StdCall)]
         public static int PySetInputTable(string sTableName, string sTableFile)
         {
+            if (!bSessionActive)
+            {
+                stackErrors.Push("Python session not started.");
+                return 1;
+            }
+
+            string sSentinelFile = GetRandomFileName(sTempDirectory);
+
+            procInputStream.WriteLine("sasnpy.set_input_table('{0}', '{1}', '{2}')", sTableName, sTableFile, sSentinelFile);
+            procInputStream.WriteLine(procInputStream.NewLine);
+            procInputStream.Flush();
+
+            WaitForSentinelFile(sSentinelFile);
+
             return 0;
         }
 
@@ -268,7 +282,22 @@ namespace SASnPy
         [DllExport("PyGetOutputTable", CallingConvention = CallingConvention.StdCall)]
         public static string PyGetOutputTable(string sTableName)
         {
-            return string.Empty;
+            if (!bSessionActive)
+            {
+                stackErrors.Push("Python session not started.");
+                return string.Empty;
+            }
+
+            string sSentinelFile = GetRandomFileName(sTempDirectory);
+            string sTableFile = GetRandomFileName(sTempDataOutDir, "csv");
+
+            procInputStream.WriteLine("sasnpy.get_output_table('{0}', '{1}', '{2}')", sTableName, sTableFile, sSentinelFile);
+            procInputStream.WriteLine(procInputStream.NewLine);
+            procInputStream.Flush();
+
+            WaitForSentinelFile(sSentinelFile);
+
+            return File.Exists(sTableFile) ? sTableFile : string.Empty;
         }
 
         [DllExport("PyGetOutputScalar", CallingConvention = CallingConvention.StdCall)]
@@ -281,7 +310,7 @@ namespace SASnPy
             }
 
             string sSentinelFile = GetRandomFileName(sTempDirectory);
-            string sFileName = GetRandomFileName(sTempDataOutDir);
+            string sFileName = GetRandomFileName(sTempDataOutDir, "xml");
 
             procInputStream.WriteLine("sasnpy.get_output_scalar('{0}', '{1}', '{2}')", sScalarName, sFileName, sSentinelFile);
             procInputStream.WriteLine(procInputStream.NewLine);

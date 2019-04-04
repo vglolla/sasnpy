@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import atexit
+import csv
 import xml.etree.ElementTree as ET
 
 _sasnpy_symbol_map = {}
@@ -56,8 +57,28 @@ def reroute_pyplot_show():
 	except:
 		pass
 		
-def set_input_table():
-	pass
+def read_csv_file_as_list(table_file):
+	table = []
+	try:
+		with open(table_file) as csv_file:
+			csv_reader = csv.reader(csv_file, delimiter=',')
+			for row in csv_reader:
+				table.append(row)
+	except:
+		table = None
+	return table
+		
+def set_input_table(table_name, table_file, sentinel_file):
+	try:
+		pd = import_package("pandas")
+		if not pd is None:
+			table = pd.read_csv(table_file)
+		else:
+			table = read_csv_file_as_list(table_file)
+		_sasnpy_locals[table_name] = table
+			
+	finally:
+		create_sentinel_file(sentinel_file)
 	
 def set_input_scalar(scalar_file, sentinel_file):
 	try:
@@ -77,9 +98,28 @@ def set_input_scalar(scalar_file, sentinel_file):
 			
 	finally:
 		create_sentinel_file(sentinel_file)
-	
-def get_output_table():
-	pass
+
+def write_list_as_csv_file(table, table_file):
+	try:
+		with open(table_file, mode='w') as csv_file:
+			csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+			for row in table:
+				csv_writer.writerow(row)
+	finally:
+		pass
+		
+def get_output_table(table_name, table_file, sentinel_file):
+	try:
+		if table_name in _sasnpy_locals:
+			table = _sasnpy_locals[table_name]
+			pd = import_package("pandas")
+			if (not pd is None) and isinstance(table, pd.DataFrame):
+				table.to_csv(table_file)
+			else:
+				write_list_as_csv_file(table, table_file)
+			
+	finally:
+		create_sentinel_file(sentinel_file)
 
 def get_output_scalar(scalar_name, scalar_file, sentinel_file):
 	try:
