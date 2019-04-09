@@ -51,6 +51,7 @@ namespace SASnPyTestClient
             //Console.WriteLine("baseball_dup : {0}", sTableFile2);
 
             SASnPyHelper.PySetInputScalar("max_iter", "42", "float");
+            SASnPyHelper.PySetInputScalar("some_number", "123.4567", "float");
             SASnPyHelper.PySetInputScalar("myname", "sasnpy", "str");
             SASnPyHelper.PyExecuteScript("C:/GHRepositories/sasnpy/TestScripts/pyScalarTest1.py");
 

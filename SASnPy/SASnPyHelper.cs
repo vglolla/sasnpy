@@ -32,6 +32,7 @@ namespace SASnPy
         static Process procObj = null;
 
         static string sDLLPath;
+        static string sLogFile = string.Empty;
         static bool bSessionActive = false;
 
         static Stack<string> stackErrors;
@@ -55,6 +56,8 @@ namespace SASnPy
                 stackErrors.Push("Python path not set");
 
             CreateTempDirectories();
+            sLogFile = Path.Combine(sTempDirectory, "sasnpy.log");
+
 
             if (procObj != null && !procObj.HasExited)
                 procObj.Kill();
@@ -175,6 +178,7 @@ namespace SASnPy
             string sScriptFile = sScript;
             string output = string.Empty;
             string error = string.Empty;
+            bool bCleanupCodeFile = false;
 
             sbOutputStream = new StringBuilder();
             sbErrorStream = new StringBuilder();
@@ -186,6 +190,7 @@ namespace SASnPy
                 string sTempFile = GetRandomFileName(sTempDirectory);
                 File.WriteAllText(sTempFile, sScript);
                 sScriptFile = sTempFile;
+                bCleanupCodeFile = true;
             }
 
             string sSentinelFile = GetRandomFileName(sTempDirectory);
@@ -210,6 +215,8 @@ namespace SASnPy
                 error = sbErrorStream.ToString().Trim();
                 if (File.Exists(sSentinelFile))
                     File.Delete(sSentinelFile);
+                if (bCleanupCodeFile)
+                    File.Delete(sScriptFile);
             }
 
 
@@ -319,6 +326,37 @@ namespace SASnPy
             WaitForSentinelFile(sSentinelFile);
 
             return File.Exists(sFileName) ? sFileName : string.Empty;
+        }
+
+        [DllExport("PyGetOutputScalarElement", CallingConvention = CallingConvention.StdCall)]
+        public static string PyGetOutputScalarElement(string sFilename, string sComponent)
+        {
+            if (!bSessionActive)
+            {
+                stackErrors.Push("Python session not started.");
+                return string.Empty;
+            }
+
+            try
+            {
+                XDocument xDoc = XDocument.Parse(File.ReadAllText(sFilename));
+                if (string.Compare(sComponent, "type", true) == 0)
+                {
+                    XAttribute attr = xDoc.Root.Attribute("type");
+                    return attr != null ? attr.Value : string.Empty;
+                }
+
+                if (string.Compare(sComponent, "value", true) == 0)
+                {
+                    return xDoc.Root.Value;
+                }
+            }
+            catch(Exception ex)
+            {
+                stackErrors.Push(ex.Message);
+            }
+
+            return string.Empty;
         }
 
         [DllExport("PyGetLastError", CallingConvention = CallingConvention.StdCall)]

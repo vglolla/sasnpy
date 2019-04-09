@@ -11,21 +11,13 @@ data _null_;
 
 	%PyStartSession();
 
-	%PyExecuteScript('C:/GHRepositories/sasnpy/TestScripts/pySample1.py');
-	
 	%PySetInputTable("cars", sashelp.cars);
 	%PySetInputTable("baseball", sashelp.baseball);
 
 	%PyExecuteScript('C:/GHRepositories/sasnpy/TestScripts/pyTableTest2.py');
 
-	%PySetInputScalar("max_iter", 42);
-	%PySetInputScalar("some_number", 123.4567);
-	%PySetInputScalar("myname", "sasnpy");
-
-	%PyExecuteScript('C:/GHRepositories/sasnpy/TestScripts/pyScalarTest1.py');
-	
-	%PyGetOutputTable('cars_dup', work.carsdup);
-	%PyGetOutputTable('baseball_dup', work.baseballdup);
+	%PyGetOutputTable('cars_dupx', work.carsdup);
+	%PyGetOutputTable('baseball_dupx', work.baseballdup);
 
 	%PyEndSession();
 

@@ -2,7 +2,6 @@
 
 %macro PyInitialize(path);
 %let sasnpydllpath=%str(%sysfunc(dequote(&path)));
-%put &sasnpydllpath;
 
 PROC PROTO package = Work.sasnpy.dotnet
 		   label = "SASnPY .NET Module"
@@ -20,6 +19,7 @@ int PySetInputTable(char *, char *) label="Set input table";
 int PySetInputScalar(char *, char *, char *) label="Set input value";
 char * PyGetOutputTable(char *) label="Get output table";
 char * PyGetOutputScalar(char *) label="Get output scalar";
+char * PyGetOutputScalarElement(char *, char *) label="Get output scalar components";
 char * PyGetLastError() label="Get last error";
 
 RUN;
@@ -74,6 +74,12 @@ ENDSUB;
 FUNCTION sasnpy_getoutputscalar(scalarname $) $ 1024;
 	length x $1024;
 	x = TRIM(PyGetOutputScalar(TRIM(scalarname)));
+	return(x);
+ENDSUB;
+
+FUNCTION sasnpy_getoutputscalarElement(scalarfile $, componenttype $) $ 2048;
+	length x $2048;
+	x = TRIM(PyGetOutputScalarElement(TRIM(scalarfile), TRIM(componenttype)));
 	return(x);
 ENDSUB;
 
@@ -135,15 +141,65 @@ run;
 
 %mend;
 
+%macro PyGetOutputTable(name, ds);
+
+data _null_;
+	length tempfile $ 1024;
+	tempfile = sasnpy_getoutputtable(&name);
+	if missing(tempfile) then do;
+		errormsg = &name || 'not accessible.';
+		put 'ERROR:' errormsg;
+	end;
+	call symput("sasnpydofile", "'"||TRIM(tempfile)||"'");
+run;
+
+proc import datafile=&sasnpydofile
+	out=&ds
+	dbms=csv
+	replace;
+run;
+
+%mend;
+
 %macro PySetInputScalar(name, value);
+
 data _null_;
 %if (%datatyp(&value)=NUMERIC) %then %do;
-   x = sasnpy_setinputscalar(&name, "'"||&value||"''", "float");
+   x = sasnpy_setinputscalar(&name, STRIP(PUT(&value, best32.)), "float");
+
 %end;
 %else %do;
    x = sasnpy_setinputscalar(&name, &value, "str");
 %end;
 run;
+
+%mend;
+
+%macro PyGetOutputScalar(name, varname);
+
+data _null_;
+	length tempfile $ 1024;
+	length xtype $ 1024;
+	length xvalue $ 1024;
+
+	tempfile = sasnpy_getoutputscalar(&name);
+	if missing(tempfile) then do;
+		errormsg = &name || 'not accessible.';
+		put 'ERROR:' errormsg;
+	end;
+
+	xtype = TRIM(sasnpy_getoutputscalarElement(tempfile, "type"));
+	xvalue = TRIM(sasnpy_getoutputscalarElement(tempfile, "value"));
+
+	if compare(xtype,"float", "i")=0 then do;
+		&varname = input(xvalue, best32.);
+	end;
+	else do;
+		&varname = xvalue;
+	end;
+run;
+
+
 %mend;
 
 %macro PyExecuteScript(script);
