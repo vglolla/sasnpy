@@ -1,11 +1,10 @@
 dm 'log;clear;';
 
-%include 'C:/GHRepositories\sasnpy/SAS-Scripts/sasnpy.sas';
+%include 'C:/GHRepositories/sasnpy/SAS-Scripts/sasnpy.sas';
 
 %PyInitialize("C:/GHRepositories/sasnpy/SASnPy/bin/x64/Debug");
 
 %PySetPath("C:/Python/Python3.6/Python.exe");
-
 
 data _null_;
 
@@ -20,8 +19,8 @@ data _null_;
 	%PyGetOutputScalar("some_str", abc);
 	%PyGetOutputScalar("some_num", def);
 
-	put 'some_str = ' abc;
-	put 'some_num = ' def;
+	put 'abc (some_str) = ' abc;
+	put 'def (some_num) = ' def;
 
 	%PyEndSession();
 

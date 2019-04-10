@@ -53,8 +53,18 @@ namespace SASnPyTestClient
             SASnPyHelper.PySetInputScalar("max_iter", "42", "float");
             SASnPyHelper.PySetInputScalar("some_number", "123.4567", "float");
             SASnPyHelper.PySetInputScalar("myname", "sasnpy", "str");
+
             SASnPyHelper.PyExecuteScript("C:/GHRepositories/sasnpy/TestScripts/pyScalarTest1.py");
 
+            //var v1_file = SASnPyHelper.PyGetOutputScalar("some_num");
+            var v1_file = "C:/Users/svglolla/AppData/Local/Temp/SASnPyDebug/DataOut/0hitvrr0.xml";
+            var v1_type = SASnPyHelper.PyGetOutputScalarElement(v1_file, "type");
+            var v1_value = SASnPyHelper.PyGetOutputScalarElement(v1_file, "value");
+
+            //var v2_file = SASnPyHelper.PyGetOutputScalar("some_str");
+            var v2_file = "C:/Users/svglolla/AppData/Local/Temp/SASnPyDebug/DataOut/wrqdobwj.xml";
+            var v2_type = SASnPyHelper.PyGetOutputScalarElement(v2_file, "type");
+            var v2_value = SASnPyHelper.PyGetOutputScalarElement(v2_file, "value");
 
             SASnPyHelper.PyEndSession();
         }

@@ -1,6 +1,6 @@
 dm 'log;clear;';
 
-%include 'C:/GHRepositories\sasnpy/SAS-Scripts/sasnpy.sas';
+%include 'C:/GHRepositories/sasnpy/SAS-Scripts/sasnpy.sas';
 
 %PyInitialize("C:/GHRepositories/sasnpy/SASnPy/bin/x64/Debug");
 

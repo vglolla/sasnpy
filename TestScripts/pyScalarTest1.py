@@ -4,4 +4,4 @@ print('myname', myname)
 
 	
 some_str = "Hello"
-some_num = 123.45	
+some_num = 123.45

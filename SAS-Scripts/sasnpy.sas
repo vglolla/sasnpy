@@ -1,4 +1,5 @@
 %let sasnpydllpath=;
+%let xcount=0;
 
 %macro PyInitialize(path);
 %let sasnpydllpath=%str(%sysfunc(dequote(&path)));
@@ -77,8 +78,8 @@ FUNCTION sasnpy_getoutputscalar(scalarname $) $ 1024;
 	return(x);
 ENDSUB;
 
-FUNCTION sasnpy_getoutputscalarElement(scalarfile $, componenttype $) $ 2048;
-	length x $2048;
+FUNCTION sasnpy_getoutputscalarElement(scalarfile $, componenttype $) $ 1024;
+	length x $1024;
 	x = TRIM(PyGetOutputScalarElement(TRIM(scalarfile), TRIM(componenttype)));
 	return(x);
 ENDSUB;
@@ -101,24 +102,21 @@ options append=(cmplib=Work.sasnpy);
 
 %macro PySetPath(path);
 data _null_;
-x = sasnpy_setpath(&path);
+	x = sasnpy_setpath(&path);
 run;
 %mend;
 
 %macro PyStartSession();
 data _null_;
-x = sasnpy_startsession();
-run;
+	x = sasnpy_startsession();
 %mend;
 
 %macro PyEndSession();
 data _null_;
-x = sasnpy_endsession();
-run;
+	x = sasnpy_endsession();
 %mend;
 
 %macro PySetInputTable(name, ds);
-
 data _null_;
 	length tempfile $ 2048;
 	length tempdir $ 1024;
@@ -127,7 +125,6 @@ data _null_;
 	tempdir = sasnpy_sessiontemplocation();
 	tempfile = TRIM(tempdir) || '/DataIn/' || TRIM(tempname) ||'.csv';
 	call symput("sasnpydifile", "'"||TRIM(tempfile)||"'");
-run;
 
 proc export data=&ds
 	outfile = &sasnpydifile
@@ -137,12 +134,10 @@ run;
 
 data _null_;
 	x = sasnpy_setinputable(&name, &sasnpydifile);
-run;
 
 %mend;
 
 %macro PyGetOutputTable(name, ds);
-
 data _null_;
 	length tempfile $ 1024;
 	tempfile = sasnpy_getoutputtable(&name);
@@ -151,7 +146,6 @@ data _null_;
 		put 'ERROR:' errormsg;
 	end;
 	call symput("sasnpydofile", "'"||TRIM(tempfile)||"'");
-run;
 
 proc import datafile=&sasnpydofile
 	out=&ds
@@ -159,25 +153,23 @@ proc import datafile=&sasnpydofile
 	replace;
 run;
 
+data _null_;
+
 %mend;
 
 %macro PySetInputScalar(name, value);
-
 data _null_;
-%if (%datatyp(&value)=NUMERIC) %then %do;
-   x = sasnpy_setinputscalar(&name, STRIP(PUT(&value, best32.)), "float");
+	%if (%datatyp(&value)=NUMERIC) %then %do;
+	   x = sasnpy_setinputscalar(&name, STRIP(PUT(&value, best32.)), "float");
 
-%end;
-%else %do;
-   x = sasnpy_setinputscalar(&name, &value, "str");
-%end;
-run;
-
+	%end;
+	%else %do;
+	   x = sasnpy_setinputscalar(&name, &value, "str");
+	%end;
 %mend;
 
 %macro PyGetOutputScalar(name, varname);
 
-data _null_;
 	length tempfile $ 1024;
 	length xtype $ 1024;
 	length xvalue $ 1024;
@@ -188,31 +180,15 @@ data _null_;
 		put 'ERROR:' errormsg;
 	end;
 
-	xtype = TRIM(sasnpy_getoutputscalarElement(tempfile, "type"));
-	xvalue = TRIM(sasnpy_getoutputscalarElement(tempfile, "value"));
-
-	if compare(xtype,"float", "i")=0 then do;
-		&varname = input(xvalue, best32.);
-	end;
-	else do;
-		&varname = xvalue;
-	end;
-run;
-
+	xtype = TRIM(sasnpy_getoutputscalarElement(TRIM(tempfile), "type"));
+	xvalue = TRIM(sasnpy_getoutputscalarElement(TRIM(tempfile),"value"));
+	length &varname $ 1024;
+	&varname = xvalue;
 
 %mend;
 
 %macro PyExecuteScript(script);
 data _null_;
-x = sasnpy_executescript(&script);
-run;
+	x = sasnpy_executescript(&script);
 %mend;
 
-/*
-
-%macro PyResultsPath();
-sasnpy_workingdir();
-%mend;
-
-
-*/

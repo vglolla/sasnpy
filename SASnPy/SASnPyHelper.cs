@@ -339,6 +339,9 @@ namespace SASnPy
 
             try
             {
+                File.AppendAllText(sLogFile, string.Format("[{0}] for [{1}]", sFilename, sComponent));
+                sFilename = sFilename.Trim();
+                sComponent = sComponent.Trim();
                 XDocument xDoc = XDocument.Parse(File.ReadAllText(sFilename));
                 if (string.Compare(sComponent, "type", true) == 0)
                 {
