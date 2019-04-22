@@ -23,7 +23,7 @@ namespace SASnPy
         static string sTempDirectory = string.Empty;
         static string sTempDataInDir = string.Empty;
         static string sTempDataOutDir = string.Empty;
-        static string sTempDisplayConentDir = string.Empty;
+        static string sTempDisplayContentDir = string.Empty;
         static string sTempDataPlotsDir = string.Empty;
 
         static StringBuilder sbOutputStream;
@@ -94,7 +94,7 @@ namespace SASnPy
             procInputStream.WriteLine("import sasnpy");
             procInputStream.WriteLine("sasnpy._sasnpy_symbol_map['tempdir_datain'] = '{0}'", sTempDataInDir.Replace('\\', '/'));
             procInputStream.WriteLine("sasnpy._sasnpy_symbol_map['tempdir_dataout'] = '{0}'", sTempDataOutDir.Replace('\\', '/'));
-            procInputStream.WriteLine("sasnpy._sasnpy_symbol_map['tempdir_displaycontent'] = '{0}'", sTempDisplayConentDir.Replace('\\', '/'));
+            procInputStream.WriteLine("sasnpy._sasnpy_symbol_map['tempdir_displaycontent'] = '{0}'", sTempDisplayContentDir.Replace('\\', '/'));
             procInputStream.WriteLine("sasnpy._sasnpy_symbol_map['tempdir_plots'] = '{0}'", sTempDataPlotsDir.Replace('\\', '/'));
 
             procInputStream.Flush();
@@ -231,7 +231,98 @@ namespace SASnPy
             File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", sErrorFile), error);
             File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", sMetaFile), sMeta);
 
+            CreateOutputHTML(output, error, iScriptCounter);
+
+            bool bErrorEmpty = string.IsNullOrWhiteSpace(error);
+            if (!bErrorEmpty)
+                stackErrors.Push(error);
+
+            return  iScriptCounter;
+        }
+
+        static int CreateOutputHTML(string sOutput, string sError, int iCounter)
+        {
+            string sHTMLOutputDir = @"C:/GHRepositories/sasnpy/HTMLOutput";
+
+            string sReport = File.ReadAllText(Path.Combine(sHTMLOutputDir, "sasnpy.htm"));
+
+            if (!string.IsNullOrWhiteSpace(sOutput))
+                sReport = sReport.Replace("OUTPUTCONTENT", AddPlotContent(sOutput));
+            else
+                sReport = sReport.Replace("OUTPUTCONTENT", string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(sError))
+                sReport = sReport.Replace("ERRORCONTENT", sError);
+            else
+                sReport = sReport.Replace("ERRORCONTENT", string.Empty);
+
+            string sHTMLOutputFile = Path.Combine(sTempDirectory, "DisplayContent", string.Format("output-{0}.htm", iCounter));
+            File.WriteAllText(sHTMLOutputFile, sReport);
+
             return 0;
+        }
+
+        [DllExport("PyInjectHTMLOutput", CallingConvention = CallingConvention.StdCall)]
+        public static int PyInjectHTMLOutput(string sHTMLFileName, string sSessionID)
+        {
+            int iSessionID = int.Parse(sSessionID);
+            int retValue = iSessionID;
+
+            try
+            {
+                string sSessionHTMLFile = PyGetOutputHTMLFileCore(iSessionID);
+                if (File.Exists(sSessionHTMLFile))
+                {
+                    int iAttempt = 0;
+                    int maxAttempts = 20;
+                    while (iAttempt <= maxAttempts)
+                    {
+                        try
+                        {
+                            iAttempt++;
+                            File.AppendAllText(sHTMLFileName, File.ReadAllText(sSessionHTMLFile));
+                            iAttempt = maxAttempts + 1;
+                        }
+                        catch (System.IO.IOException)
+                        {
+                            System.Threading.Thread.Sleep(1000);
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                File.AppendAllText(sLogFile, string.Format("Error : {0}", ex.ToString()));
+                stackErrors.Push(ex.Message);
+                retValue = -iSessionID;
+            }
+
+            return retValue;
+        }
+
+        [DllExport("PyGetOutputHTMLFile", CallingConvention = CallingConvention.StdCall)]
+        public static string PyGetOutputHTMLFile(int iSessionID)
+        {
+            return PyGetOutputHTMLFileCore(iSessionID);
+        }
+
+        static string PyGetOutputHTMLFileCore(int iSessionID)
+        {
+            string sOutputHTMLFile = Path.Combine(sTempDisplayContentDir, string.Format("output-{0}.htm", iSessionID));
+            return File.Exists(sOutputHTMLFile) ? sOutputHTMLFile : string.Empty;
+        }
+
+
+        [DllExport("PyGetMetaDataFile", CallingConvention = CallingConvention.StdCall)]
+        public static string PyGetMetaDataFile(int iSessionID)
+        {
+            return PyGetMetaDataFileCore(iSessionID);
+        }
+
+        static string PyGetMetaDataFileCore(int iSessionID)
+        {
+            string sMetaDataFile = Path.Combine(sTempDisplayContentDir, string.Format("meta-{0}.txt", iSessionID));
+            return File.Exists(sMetaDataFile) ? sMetaDataFile : string.Empty;
         }
 
         [DllExport("PySessionTempLocation", CallingConvention = CallingConvention.StdCall)]
@@ -339,7 +430,7 @@ namespace SASnPy
 
             try
             {
-                File.AppendAllText(sLogFile, string.Format("[{0}] for [{1}]", sFilename, sComponent));
+                //File.AppendAllText(sLogFile, string.Format("[{0}] for [{1}]", sFilename, sComponent));
                 sFilename = sFilename.Trim();
                 sComponent = sComponent.Trim();
                 XDocument xDoc = XDocument.Parse(File.ReadAllText(sFilename));
@@ -378,17 +469,17 @@ namespace SASnPy
             sTempDirectory = Path.Combine(Path.GetTempPath(), "SASnPyDebug");
             sTempDirectory = sTempDirectory.Replace('\\', '/');
 
-            sTempDataPlotsDir = Path.Combine(sTempDirectory, "DisplayContent", "Plots");
-            sTempDisplayConentDir = Path.Combine(sTempDirectory, "DisplayContent", "Plots");
-            sTempDataInDir = Path.Combine(sTempDirectory, "DataIn");
-            sTempDataOutDir = Path.Combine(sTempDirectory, "DataOut");
+            sTempDataPlotsDir = Path.Combine(sTempDirectory, "DisplayContent", "Plots").Replace('\\', '/');
+            sTempDisplayContentDir = Path.Combine(sTempDirectory, "DisplayContent").Replace('\\', '/');
+            sTempDataInDir = Path.Combine(sTempDirectory, "DataIn").Replace('\\', '/');
+            sTempDataOutDir = Path.Combine(sTempDirectory, "DataOut").Replace('\\', '/');
 
             try
             {
                 Directory.CreateDirectory(sTempDirectory);
                 Directory.CreateDirectory(sTempDataInDir);
                 Directory.CreateDirectory(sTempDataOutDir);
-                Directory.CreateDirectory(sTempDisplayConentDir);
+                Directory.CreateDirectory(sTempDisplayContentDir);
                 Directory.CreateDirectory(sTempDataPlotsDir);
             }
             catch(Exception ex)
@@ -396,7 +487,7 @@ namespace SASnPy
                 stackErrors.Push("Failed to created temp directories: " + ex.Message);
                 sTempDirectory = string.Empty;
                 sTempDataPlotsDir = string.Empty;
-                sTempDisplayConentDir = string.Empty;
+                sTempDisplayContentDir = string.Empty;
                 sTempDataInDir = string.Empty;
                 sTempDataOutDir = string.Empty;
             }
@@ -412,99 +503,99 @@ namespace SASnPy
         }
 
 
-        public static int ExecuteScript(string sScript)
-        {
-            string sScriptFile = sScript;
-            string output = string.Empty;
-            string error = string.Empty;
+        //public static int ExecuteScript(string sScript)
+        //{
+        //    string sScriptFile = sScript;
+        //    string output = string.Empty;
+        //    string error = string.Empty;
 
-            sbOutputStream = new StringBuilder();
-            sbErrorStream = new StringBuilder();
-            Stopwatch stopwatch = new Stopwatch();
+        //    sbOutputStream = new StringBuilder();
+        //    sbErrorStream = new StringBuilder();
+        //    Stopwatch stopwatch = new Stopwatch();
 
-            string sHTMLOutputDir = @"C:/GHRepositories/sasnpy/HTMLOutput";
-            string sPythonScriptDir = @"C:/GHRepositories/sasnpy/Python-Scripts";
+        //    string sHTMLOutputDir = @"C:/GHRepositories/sasnpy/HTMLOutput";
+        //    string sPythonScriptDir = @"C:/GHRepositories/sasnpy/Python-Scripts";
 
-            string dllPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            string sTempDir = TempWorkingDirectory();
+        //    string dllPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        //    string sTempDir = TempWorkingDirectory();
 
-            string sTempDirPlots = Path.Combine(sTempDir, "DisplayContent", "Plots");
-            string sTempDirDisplayContent = Path.Combine(sTempDir, "DisplayContent", "Plots");
-            string sTempDirDataIn = Path.Combine(sTempDir, "DataIn");
-            string sTempDirDataOut = Path.Combine(sTempDir, "DataOut");
+        //    string sTempDirPlots = Path.Combine(sTempDir, "DisplayContent", "Plots");
+        //    string sTempDirDisplayContent = Path.Combine(sTempDir, "DisplayContent", "Plots");
+        //    string sTempDirDataIn = Path.Combine(sTempDir, "DataIn");
+        //    string sTempDirDataOut = Path.Combine(sTempDir, "DataOut");
 
-            if (!File.Exists(sScriptFile))
-            {
-                string sTempFile = Path.Combine(sTempDir, Path.GetRandomFileName());
-                File.WriteAllText(sTempFile, sScript);
-                sScriptFile = sTempFile;
-            }
+        //    if (!File.Exists(sScriptFile))
+        //    {
+        //        string sTempFile = Path.Combine(sTempDir, Path.GetRandomFileName());
+        //        File.WriteAllText(sTempFile, sScript);
+        //        sScriptFile = sTempFile;
+        //    }
 
-            using (Process process = new Process())
-            {
-                try
-                {
-                    process.StartInfo.FileName = sPythonPath;
-                    //process.StartInfo.Arguments = sScriptFile;
+        //    using (Process process = new Process())
+        //    {
+        //        try
+        //        {
+        //            process.StartInfo.FileName = sPythonPath;
+        //            //process.StartInfo.Arguments = sScriptFile;
 
-                    process.StartInfo.UseShellExecute = false;
-                    process.StartInfo.RedirectStandardInput = true;
-                    process.StartInfo.RedirectStandardOutput = true;
-                    process.StartInfo.RedirectStandardError = true;
-                    process.StartInfo.CreateNoWindow = true;
+        //            process.StartInfo.UseShellExecute = false;
+        //            process.StartInfo.RedirectStandardInput = true;
+        //            process.StartInfo.RedirectStandardOutput = true;
+        //            process.StartInfo.RedirectStandardError = true;
+        //            process.StartInfo.CreateNoWindow = true;
 
-                    process.OutputDataReceived += Process_OutputDataReceived;
-                    process.ErrorDataReceived += Process_ErrorDataReceived;
+        //            process.OutputDataReceived += Process_OutputDataReceived;
+        //            process.ErrorDataReceived += Process_ErrorDataReceived;
 
-                    stopwatch.Start();
+        //            stopwatch.Start();
 
-                    process.Start();
-                    process.BeginOutputReadLine();
-                    process.BeginErrorReadLine();
+        //            process.Start();
+        //            process.BeginOutputReadLine();
+        //            process.BeginErrorReadLine();
 
-                    StreamWriter processInput = process.StandardInput;
+        //            StreamWriter processInput = process.StandardInput;
 
-                    processInput.WriteLine("import sys");
-                    processInput.WriteLine("sys.path.append('{0}')", dllPath.Replace('\\', '/'));
-                    processInput.WriteLine("sys.path.append('{0}')", sPythonScriptDir);
-                    processInput.WriteLine("import sasnpy");
-                    processInput.WriteLine("sasnpy.sasnpy_tempdir_datain = '{0}'", sTempDirDataIn.Replace('\\', '/'));
-                    processInput.WriteLine("sasnpy.sasnpy_tempdir_dataout = '{0}'", sTempDirDataOut.Replace('\\', '/'));
-                    processInput.WriteLine("sasnpy.sasnpy_tempdir_displaycontent = '{0}'", sTempDirDisplayContent.Replace('\\', '/'));
-                    processInput.WriteLine("sasnpy.sasnpy_tempdir_plots = '{0}'", sTempDirPlots.Replace('\\', '/'));
+        //            processInput.WriteLine("import sys");
+        //            processInput.WriteLine("sys.path.append('{0}')", dllPath.Replace('\\', '/'));
+        //            processInput.WriteLine("sys.path.append('{0}')", sPythonScriptDir);
+        //            processInput.WriteLine("import sasnpy");
+        //            processInput.WriteLine("sasnpy.sasnpy_tempdir_datain = '{0}'", sTempDirDataIn.Replace('\\', '/'));
+        //            processInput.WriteLine("sasnpy.sasnpy_tempdir_dataout = '{0}'", sTempDirDataOut.Replace('\\', '/'));
+        //            processInput.WriteLine("sasnpy.sasnpy_tempdir_displaycontent = '{0}'", sTempDirDisplayContent.Replace('\\', '/'));
+        //            processInput.WriteLine("sasnpy.sasnpy_tempdir_plots = '{0}'", sTempDirPlots.Replace('\\', '/'));
 
-                    processInput.WriteLine("sasnpy.run_script('{0}')", sScriptFile);
+        //            processInput.WriteLine("sasnpy.run_script('{0}')", sScriptFile);
 
-                    processInput.WriteLine("exit()");
-                    processInput.Flush();
-                    processInput.Close();
+        //            processInput.WriteLine("exit()");
+        //            processInput.Flush();
+        //            processInput.Close();
 
-                    process.WaitForExit();
-                }
-                catch (Exception ex)
-                {
-                    sbErrorStream.AppendLine(ex.Message);
-                }
-                finally
-                {
-                    stopwatch.Stop();
-                    output = sbOutputStream.ToString();
-                    error = sbErrorStream.ToString().Trim();
-                }
-            }
+        //            process.WaitForExit();
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            sbErrorStream.AppendLine(ex.Message);
+        //        }
+        //        finally
+        //        {
+        //            stopwatch.Stop();
+        //            output = sbOutputStream.ToString();
+        //            error = sbErrorStream.ToString().Trim();
+        //        }
+        //    }
 
-            string sMeta = CreateMetaContent(sPythonPath, sScriptFile, stopwatch);
+        //    string sMeta = CreateMetaContent(sPythonPath, sScriptFile, stopwatch);
 
-            File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", "meta.txt"), sMeta);
-            File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", "output.txt"), output);
-            File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", "error.txt"), error);
+        //    File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", "meta.txt"), sMeta);
+        //    File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", "output.txt"), output);
+        //    File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", "error.txt"), error);
 
-            string htmlReport = CreateHTMLReport(sHTMLOutputDir, output, error, sMeta);
-            File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", "report.html"), htmlReport);
-            File.Copy(Path.Combine(sHTMLOutputDir, "sasnpy.css"), Path.Combine(sTempDirectory, "DisplayContent", "sasnpy.css"), true);
+        //    string htmlReport = CreateHTMLReport(sHTMLOutputDir, output, error, sMeta);
+        //    File.WriteAllText(Path.Combine(sTempDirectory, "DisplayContent", "report.html"), htmlReport);
+        //    File.Copy(Path.Combine(sHTMLOutputDir, "sasnpy.css"), Path.Combine(sTempDirectory, "DisplayContent", "sasnpy.css"), true);
 
-            return string.IsNullOrWhiteSpace(error) ? 0 : 1;
-        }
+        //    return string.IsNullOrWhiteSpace(error) ? 0 : 1;
+        //}
 
         //private static StringWriter CreateHTMLReport(string sOutput, string sError, string sPythonPath, string sScriptFile, Stopwatch stopwatch)
         //{
@@ -564,24 +655,24 @@ namespace SASnPy
         //    return stringWriter;
         //}
 
-        private static String CreateHTMLReport(string sDLLPath, string sOutput, string sError, string sMeta)
-        {
-            string sReport = File.ReadAllText(Path.Combine(sDLLPath, "sasnpy.htm"));
+        //private static String CreateHTMLReport(string sDLLPath, string sOutput, string sError, string sMeta)
+        //{
+        //    string sReport = File.ReadAllText(Path.Combine(sDLLPath, "sasnpy.htm"));
 
-            if (!string.IsNullOrWhiteSpace(sOutput))
-                sReport = sReport.Replace("OUTPUTCONTENT", AddPlotContent(sOutput));
-            else
-                sReport = sReport.Replace("OUTPUTCONTENT", string.Empty);
+        //    if (!string.IsNullOrWhiteSpace(sOutput))
+        //        sReport = sReport.Replace("OUTPUTCONTENT", AddPlotContent(sOutput));
+        //    else
+        //        sReport = sReport.Replace("OUTPUTCONTENT", string.Empty);
 
-            if (!string.IsNullOrWhiteSpace(sError))
-                sReport = sReport.Replace("ERRORCONTENT", sError);
-            else
-                sReport = sReport.Replace("ERRORCONTENT", string.Empty);
+        //    if (!string.IsNullOrWhiteSpace(sError))
+        //        sReport = sReport.Replace("ERRORCONTENT", sError);
+        //    else
+        //        sReport = sReport.Replace("ERRORCONTENT", string.Empty);
 
-            sReport = sReport.Replace("METACONTENT", sMeta.ToString());
+        //    sReport = sReport.Replace("METACONTENT", sMeta.ToString());
 
-            return sReport;
-        }
+        //    return sReport;
+        //}
 
         private static string CreateMetaContent(string sPythonPath, string sScriptFile, Stopwatch stopwatch)
         {

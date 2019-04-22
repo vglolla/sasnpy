@@ -1,5 +1,5 @@
 %let sasnpydllpath=;
-%let xcount=0;
+%let sasnpy_option_htmloutput=1;
 
 %macro PyInitialize(path);
 %let sasnpydllpath=%str(%sysfunc(dequote(&path)));
@@ -22,6 +22,9 @@ char * PyGetOutputTable(char *) label="Get output table";
 char * PyGetOutputScalar(char *) label="Get output scalar";
 char * PyGetOutputScalarElement(char *, char *) label="Get output scalar components";
 char * PyGetLastError() label="Get last error";
+char * PyGetOutputHTMLFile(int ) label = "Get output HTML file";
+char * PyGetMetaDataFile(int ) label = "Get meta output file";
+int PyInjectHTMLOutput(char *, char *) label = "Inject HTML content to file";
 
 RUN;
 
@@ -90,6 +93,23 @@ FUNCTION sasnpy_getlasterror() $ 2048;
 	return(x);
 ENDSUB;
 
+FUNCTION sasnpy_getoutputhtmlfile(sessionid) $ 2048;
+	length x $ 2048;
+	x = TRIM(PyGetOutputHTMLFile(sessionid));
+	return(x);
+ENDSUB;
+
+FUNCTION sasnpy_getmetadatafile(sessionid) $ 2048;
+	length x $ 2048;
+	x = TRIM(PyGetMetaDataFile(sessionid));
+	return(x);
+ENDSUB;
+
+FUNCTION sasnpy_injecthtmloutput(htmlfile $, sessionid $);
+	x = PyInjectHTMLOutput(TRIM(htmlfile), TRIM(sessionid));
+	return(x);
+ENDSUB;
+
 /* ---------------------------------- */
 
 
@@ -97,6 +117,15 @@ ENDSUB;
 QUIT;
 
 options append=(cmplib=Work.sasnpy);
+
+PROC TEMPLATE;
+	DEFINE style sasnpystyle;
+		parent=styles.sasweb;
+		class Table, Data, Header /
+			borderwidth = 0 
+			;
+	END;
+RUN;
 
 %mend;
 
@@ -189,6 +218,64 @@ data _null_;
 
 %macro PyExecuteScript(script);
 data _null_;
-	x = sasnpy_executescript(&script);
+	
+	length htmlfile $ 2048;
+	length metadatafile $ 2048;
+	length tempdir $ 2048;
+
+	sessionid = sasnpy_executescript(&script);
+	tempdir = TRIM(sasnpy_sessiontemplocation());
+	htmlfile = TRIM(tempdir) || '/DisplayContent/sashtml-' || STRIP(PUT(sessionid, best32.)) ||'.htm';
+	metadatafile = sasnpy_getmetadatafile(sessionid);
+	call symput("sasnpyhtmlfile", "'"||TRIM(htmlfile)||"'");
+	call symput("sasnpymetadatafile", "'"||TRIM(metadatafile)||"'");
+	call symput("sasnpysessionid", "'"||STRIP(PUT(sessionid, best32.))||"'");
+
+	data _null_;
+	run;
+
+	title 'PyExecuteScript';
+
+	filename hhandle &sasnpyhtmlfile;
+	ods html3 body=hhandle style=sasnpystyle;
+	ods html3 close;
+	filename hhandle clear;
+
+
+	data _null_;
+		y = sasnpy_injecthtmloutput(&sasnpyhtmlfile, &sasnpysessionid);
+	run;
+
+	/*
+	put "Injection : " y;
+	%put HTML File : &sasnpyhtmlfile;
+	%put Meta File : &sasnpymetadatafile;
+	%put SessionID : &sasnpysessionid;
+	*/
+
+	filename hhandle &sasnpyhtmlfile mod;
+	ods html3 body=hhandle style=sasnpystyle;
+
+	filename mhandle &sasnpymetadatafile;
+
+	data _null_;
+
+		infile mhandle;
+		input;
+		title;
+		footnote;
+		file print;
+		put _infile_;
+
+	run;
+
+	filename mhandle clear;
+
+	ods html3 close;
+
+	filename hhandle clear;
+
+	ods html;
+
 %mend;
 
