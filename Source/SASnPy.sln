@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26228.64
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SASnPy", "SASnPy.csproj", "{0245AEB5-4F33-4498-BCD4-FD7241F3D838}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SASnPy", "SASnPy\SASnPy.csproj", "{0245AEB5-4F33-4498-BCD4-FD7241F3D838}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SASnPyTestClient", "..\SASnPyTestClient\SASnPyTestClient.csproj", "{9A2E63C4-B3A4-4F55-9F0F-3FA4BBF7F7BD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SASnPyTestClient", "SASnPyTestClient\SASnPyTestClient.csproj", "{9A2E63C4-B3A4-4F55-9F0F-3FA4BBF7F7BD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

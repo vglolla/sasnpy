@@ -1,6 +1,39 @@
-%let sasnpydllpath=;
-%let sasnpy_option_htmloutput=1;
+/* --------------------------------------------------------------------------------- 
+ * MIT License
+ * 
+ * Copyright(c) 2019; Venu Gopal Lolla
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *  
+--------------------------------------------------------------------------------- */
 
+
+/* ----------------------------------------------------------------------------------
+This SAS script should be included in the user's SAS script
+-----------------------------------------------------------------------------------*/
+
+%let sasnpydllpath=;
+
+/* ----------------------------------------------------------------------------------
+Loads SASNPY.DLL and declares function prototypes for exported functions (PROC PROTO)
+Defines wrapper functions to call functions exported by SASNPY.DLL (PROC FCMP)
+-----------------------------------------------------------------------------------*/
 %macro PyInitialize(path);
 %let sasnpydllpath=%str(%sysfunc(dequote(&path)));
 
@@ -10,6 +43,7 @@ PROC PROTO package = Work.sasnpy.dotnet
 
 LINK "&sasnpydllpath/sasnpy.dll"; 
 
+/* Prototypes for methods exported by SASNPY.DLL */
 
 int PyStartSession() label="Start a new Python session";
 int PyEndSession() label="End current Python session";
@@ -28,8 +62,7 @@ int PyInjectHTMLOutput(char *, char *) label = "Inject HTML content to file";
 
 RUN;
 
-/* --------------------------------------
-   -------------------------------------- */
+/* Wrapper functions to call methods in SASNPY.DLL */
 
 PROC FCMP inlib = Work.sasnpy outlib = Work.sasnpy.wrapper;
 
@@ -110,10 +143,6 @@ FUNCTION sasnpy_injecthtmloutput(htmlfile $, sessionid $);
 	return(x);
 ENDSUB;
 
-/* ---------------------------------- */
-
-
-
 QUIT;
 
 options append=(cmplib=Work.sasnpy);
@@ -129,22 +158,37 @@ RUN;
 
 %mend;
 
+/* ----------------------------------------------------------------------------------
+Set the Python instance to use
+-----------------------------------------------------------------------------------*/
 %macro PySetPath(path);
 data _null_;
 	x = sasnpy_setpath(&path);
 run;
 %mend;
 
+/* ----------------------------------------------------------------------------------
+Starts a Python session
+A session needs to be started before scripts can be submitted
+-----------------------------------------------------------------------------------*/
 %macro PyStartSession();
 data _null_;
 	x = sasnpy_startsession();
 %mend;
 
+/* ----------------------------------------------------------------------------------
+End Python session
+-----------------------------------------------------------------------------------*/
 %macro PyEndSession();
 data _null_;
 	x = sasnpy_endsession();
+	title;
 %mend;
 
+/* ----------------------------------------------------------------------------------
+Save SAS dataset as CSV in temp location; passes the information through 
+the pipeline to load the data in Python
+-----------------------------------------------------------------------------------*/
 %macro PySetInputTable(name, ds);
 data _null_;
 	length tempfile $ 2048;
@@ -166,6 +210,10 @@ data _null_;
 
 %mend;
 
+/* ----------------------------------------------------------------------------------
+Calls a method to save Python table as CSV; then loads CSV in SAS
+-----------------------------------------------------------------------------------*/
+
 %macro PyGetOutputTable(name, ds);
 data _null_;
 	length tempfile $ 1024;
@@ -186,6 +234,9 @@ data _null_;
 
 %mend;
 
+/* ----------------------------------------------------------------------------------
+Sets a scalar value in the user script's local namespace
+-----------------------------------------------------------------------------------*/
 %macro PySetInputScalar(name, value);
 data _null_;
 	%if (%datatyp(&value)=NUMERIC) %then %do;
@@ -197,6 +248,10 @@ data _null_;
 	%end;
 %mend;
 
+/* ----------------------------------------------------------------------------------
+Gets a scalar value in the user script's local namespace; currently brings 
+everything back as a string
+-----------------------------------------------------------------------------------*/
 %macro PyGetOutputScalar(name, varname);
 
 	length tempfile $ 1024;
@@ -216,6 +271,10 @@ data _null_;
 
 %mend;
 
+/* ----------------------------------------------------------------------------------
+Executes a user's Python script; creates a HTML file (using ODS); invokes a method
+in SASNPY.DLL to inject HTML output from Python script into the ODS HTML file
+-----------------------------------------------------------------------------------*/
 %macro PyExecuteScript(script);
 data _null_;
 	
@@ -230,11 +289,10 @@ data _null_;
 	call symput("sasnpyhtmlfile", "'"||TRIM(htmlfile)||"'");
 	call symput("sasnpymetadatafile", "'"||TRIM(metadatafile)||"'");
 	call symput("sasnpysessionid", "'"||STRIP(PUT(sessionid, best32.))||"'");
+	call symput("sasnpysessiontitle", "'sasnpy-"||STRIP(PUT(sessionid, best32.))||"'");
 
 	data _null_;
 	run;
-
-	title 'PyExecuteScript';
 
 	filename hhandle &sasnpyhtmlfile;
 	ods html3 body=hhandle style=sasnpystyle;
@@ -246,13 +304,6 @@ data _null_;
 		y = sasnpy_injecthtmloutput(&sasnpyhtmlfile, &sasnpysessionid);
 	run;
 
-	/*
-	put "Injection : " y;
-	%put HTML File : &sasnpyhtmlfile;
-	%put Meta File : &sasnpymetadatafile;
-	%put SessionID : &sasnpysessionid;
-	*/
-
 	filename hhandle &sasnpyhtmlfile mod;
 	ods html3 body=hhandle style=sasnpystyle;
 
@@ -262,7 +313,7 @@ data _null_;
 
 		infile mhandle;
 		input;
-		title;
+		title &sasnpysessiontitle;
 		footnote;
 		file print;
 		put _infile_;

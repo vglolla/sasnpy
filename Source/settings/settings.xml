@@ -1,0 +1,14 @@
+<settings>
+	<!-- The relative path in the user's temp folder to be used as a working directory -->
+	<!-- A randomly generated name is used if a valid one is not specified -->
+	<WorkingDirectory>SASnPyDebug</WorkingDirectory>
+	
+	<!-- The name of the log file to be produced in the working directory -->
+	<!-- A log file is not produced if a valid name is not specified -->
+	<LogFile>sasnpy.log</LogFile>
+	
+	<!-- The maximum time (in seconds) allowed for a Python script to execute -->
+	<!-- Set to -1 (minus one) to allow unlimited time -->
+	<!-- Default Value: 3600 --> 
+	<TimeOutInSeconds>3600</TimeOutInSeconds>
+</settings>
