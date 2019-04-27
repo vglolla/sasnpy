@@ -327,6 +327,8 @@ data _null_;
 	filename hhandle clear;
 
 	ods html;
+	
+data _null_;	
 
 %mend;
 
