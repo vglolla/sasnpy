@@ -1,0 +1,7 @@
+C:\GHRepositories\sasnpy\Source\SASnPyTestClient\bin\Release\SASnPyTestClient.exe.config
+C:\GHRepositories\sasnpy\Source\SASnPyTestClient\bin\Release\SASnPyTestClient.exe
+C:\GHRepositories\sasnpy\Source\SASnPyTestClient\bin\Release\SASnPyTestClient.pdb
+C:\GHRepositories\sasnpy\Source\SASnPyTestClient\bin\Release\SASnPy.dll
+C:\GHRepositories\sasnpy\Source\SASnPyTestClient\obj\Release\SASnPyTestClient.csprojResolveAssemblyReference.cache
+C:\GHRepositories\sasnpy\Source\SASnPyTestClient\obj\Release\SASnPyTestClient.exe
+C:\GHRepositories\sasnpy\Source\SASnPyTestClient\obj\Release\SASnPyTestClient.pdb
