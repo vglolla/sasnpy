@@ -61,9 +61,9 @@ def create_sentinel_file(sentinel_file):
 def execute_script(script_file, sentinel_file):
 	try:
 		if sys.version_info >= (3, 0):
-			exec(open(script_file).read(), _sasnpy_globals, _sasnpy_locals)
+			exec(open(script_file).read(), _sasnpy_locals, _sasnpy_locals)
 		else:
-			execfile(script_file, _sasnpy_globals, _sasnpy_locals)
+			execfile(script_file, _sasnpy_locals, _sasnpy_locals)
 	finally:
 		create_sentinel_file(sentinel_file)
 			

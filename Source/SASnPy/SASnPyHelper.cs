@@ -337,6 +337,9 @@ namespace SASnPy
                 stopwatch.Stop();
                 output = sbOutputStream.ToString();
                 error = bSkipOneLogEntry ? string.Empty : sbErrorStream.ToString().Trim();
+                if (bSkipOneLogEntry)
+                    bSkipOneLogEntry = false;
+
                 if (File.Exists(sSentinelFile))
                     File.Delete(sSentinelFile);
                 if (bCleanupCodeFile)
