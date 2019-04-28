@@ -2,7 +2,7 @@
 %include 'C:\SASnPy\sasnpy.sas';
 
 /* Initialize/define function required for SAS-Python Integration */
-%PyInit(C:\GHRepositories\sasnpy\SASnPy\bin\x64\Debug);
+%PyInitialize("C:\SASnPy\");
 
 /* Set Python installation to use */
 %PySetPath("C:/Python3.6/Python.exe");

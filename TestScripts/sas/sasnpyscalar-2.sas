@@ -9,14 +9,8 @@ dm 'log;clear;';
 
 data _null_;
 
+
 	%PyStartSession();
-
-	%PyExecuteScript('C:/GHRepositories/sasnpy/TestScripts/python/pySample1.py');
-	
-	%PySetInputTable("cars", sashelp.cars);
-	%PySetInputTable("baseball", sashelp.baseball);
-
-	%PyExecuteScript('C:/GHRepositories/sasnpy/TestScripts/python/pyTableTest2.py');
 
 	%PySetInputScalar("max_iter", 42);
 	%PySetInputScalar("some_number", 123.4567);
@@ -24,18 +18,21 @@ data _null_;
 
 	%PyExecuteScript('C:/GHRepositories/sasnpy/TestScripts/python/pyScalarTest1.py');
 	
-	%PyGetOutputTable('cars_dup', work.carsdup);
-	%PyGetOutputTable('baseball_dup', work.baseballdup);
+	%PyGetOutputScalar("some_str", abc);
+	%PyGetOutputScalar("some_num", def);
 
-	%PyExecuteScript('C:/GHRepositories/sasnpy/TestScripts/python/pyFigSample2.py');
+	put 'abc (some_str) = ' abc;
+	put 'def (some_num) = ' def;
 
 	%PyEndSession();
 
 run;
 
+/*
 proc print data=work.carsdup;
 run;
 
 proc print data=work.baseballdup;
 run;
+*/
 
