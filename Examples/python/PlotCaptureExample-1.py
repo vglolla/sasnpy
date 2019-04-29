@@ -1,4 +1,4 @@
-print("Okay; let us make a plot-2 now")
+print("The following code is taken directly from matplotlib's example gallery")
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ ax.set(xlabel='time (s)', ylabel='voltage (mV)',
 ax.grid()
 plt.show()
 
-print("Time for plot-2 now")
+print("Time for another now")
 
 ## Plot 2
 ## -------------
@@ -38,4 +38,4 @@ plt.ylabel('Undamped')
 
 plt.show()
 
-print("All done")
+print("Plotting all done")
